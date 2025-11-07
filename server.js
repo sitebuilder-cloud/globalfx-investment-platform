@@ -14,22 +14,43 @@ app.use(express.static('public'));
 
 // Database Connection
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://globalfx_db_user:7Wk1eQ2pZArFnaIunsJNDqE2CQiY78io@dpg-d46mamfgi27c73au94f0-a/globalfx_db',
+  connectionString: process.env.DATABASE_URL || 'postgresql://globalfx_db_user:7Wk1eQ2pZArFnaIunsJNDqE2CQiY78io@dpg-d46mamfgi27c73au94f0-a.oregon-postgres.render.com/globalfx_db',
 });
 
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'mysecret123';
 
+// Password strength checker
+function isWeakPassword(password) {
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasLowerCase = /[a-z]/.test(password);
+  const hasNumber = /\d/.test(password);
+  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  const length = password.length >= 8;
+
+  return !(hasUpperCase && hasLowerCase && hasNumber && hasSpecialChar && length);
+}
+
 // Routes
 app.post('/api/register', async (req, res) => {
   const { email, username, password } = req.body;
 
+  // Check password strength
+  if (isWeakPassword(password)) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character.' });
+  }
+
   try {
     const hash = await bcrypt.hash(password, 10);
     const result = await pool.query(
-      'INSERT INTO users (email, username, password, balance, is_active, verified_email) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
-      [email, username, hash, 0, false, false]
+      'INSERT INTO users (email, username, password, balance, is_active, verified_email, email_verification_token) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
+      [email, username, hash, 0, false, false, crypto.randomBytes(32).toString('hex')]
     );
+
+    // Send verification email (simulated)
+    const verificationLink = `https://your-frontend-url.vercel.app/verify-email?token=${result.rows[0].email_verification_token}`;
+    console.log(`Verification link: ${verificationLink}`);
+
     res.status(201).json({ message: 'Registration successful. Please check your email to verify.' });
   } catch (err) {
     if (err.code === '23505') {
@@ -130,7 +151,7 @@ app.post('/api/deposit', async (req, res) => {
         txId
       });
     } else {
-      res.json({ message: `Deposit of $${amount} via ${method} is being reviewed.` });
+      res.json({ message: `Deposit of $${amount} via ${method} is being reviewed. Contact your account manager for payment details.` });
     }
   } catch (err) {
     res.status(500).json({ error: 'Error saving transaction' });
