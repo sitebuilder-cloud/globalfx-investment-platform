@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard - GlobalFX Invest</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-900 text-white font-sans">
+  <header class="bg-blue-600 p-4 shadow-lg">
+    <div class="container mx-auto flex justify-between items-center">
+      <h1 class="text-2xl font-bold">GlobalFX Invest</h1>
+      <nav class="hidden md:flex space-x-6">
+        <a href="#" class="hover:text-blue-200">Portfolio</a>
+        <a href="#" class="hover:text-blue-200">Transactions</a>
+        <a href="#" class="hover:text-blue-200">Withdraw</a>
+        <a href="#" class="hover:text-blue-200">Support</a>
+      </nav>
+      <div class="flex items-center space-x-2">
+        <span id="userName"></span>
+        <button onclick="logout()" class="bg-red-600 px-4 py-2 rounded hover:bg-red-700">Logout</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <div class="bg-gray-800 p-6 rounded-lg">
+        <h3 class="text-lg font-bold">Balance</h3>
+        <p id="balance" class="text-3xl font-bold mt-2">$0.00</p>
+      </div>
+      <div class="bg-gray-800 p-6 rounded-lg">
+        <h3 class="text-lg font-bold">Profit Today</h3>
+        <p id="profitToday" class="text-3xl font-bold mt-2">$0.00</p>
+      </div>
+      <div class="bg-gray-800 p-6 rounded-lg">
+        <h3 class="text-lg font-bold">Active Trades</h3>
+        <p id="activeTrades" class="text-3xl font-bold mt-2">0</p>
+      </div>
+    </div>
+
+    <!-- Deposit Button -->
+    <div class="bg-gray-800 p-6 rounded-lg mb-8">
+      <h3 class="text-xl font-bold mb-4">Make a Deposit</h3>
+      <button onclick="openDepositModal()" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">Deposit Funds</button>
+    </div>
+
+    <!-- Portfolio Section -->
+    <div class="bg-gray-800 p-6 rounded-lg mb-8">
+      <h3 class="text-xl font-bold mb-4">Your Portfolio</h3>
+      <div class="space-y-2">
+        <select id="portfolioSelect" class="w-full p-2 border rounded">
+          <option value="default">Default Portfolio</option>
+          <option value="conservative">Conservative</option>
+          <option value="balanced">Balanced</option>
+          <option value="aggressive">Aggressive</option>
+        </select>
+        <button onclick="createPortfolio()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Create New Portfolio</button>
+      </div>
+    </div>
+
+    <!-- Transactions History -->
+    <div class="bg-gray-800 p-6 rounded-lg">
+      <h3 class="text-xl font-bold mb-4">Recent Transactions</h3>
+      <div id="transactionList" class="space-y-2">
+        <p>No transactions yet.</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Deposit Modal -->
+  <div id="depositModal" class="modal hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+    <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+      <h2 class="text-xl font-bold mb-4">Deposit Funds</h2>
+      <form id="depositForm">
+        <select id="depositMethod" class="w-full p-2 mb-2 border rounded">
+          <option value="BTC">Bitcoin (BTC)</option>
+          <option value="ETH">Ethereum (ETH)</option>
+          <option value="USDT">Tether (USDT)</option>
+          <option value="Bank Transfer">Bank Transfer</option>
+          <option value="PayPal">PayPal</option>
+          <option value="CashApp">CashApp</option>
+        </select>
+        <input type="number" placeholder="Amount ($)" min="20" step="0.01" required class="w-full p-2 mb-2 border rounded" id="depositAmount"/>
+        <button type="submit" class="bg-blue-600 text-white p-2 rounded w-full">Proceed</button>
+      </form>
+      <p class="mt-4 text-sm">Note: For Bank, PayPal, CashApp — contact your account manager for payment details.</p>
+    </div>
+  </div>
+
+  <!-- Chat Box -->
+  <div id="chatBox" class="fixed bottom-4 right-4 bg-gray-800 p-4 rounded-lg shadow-lg hidden">
+    <h3 class="font-bold mb-2">Support Chat</h3>
+    <div id="messageList" class="h-64 overflow-y-auto mb-2 bg-gray-700 p-2 rounded">
+      <p class="text-xs text-gray-300">Type your message...</p>
+    </div>
+    <input type="text" id="msgInput" class="w-full p-2 border rounded mb-2" placeholder="Type your message..."/>
+    <button onclick="sendMessage()" class="bg-blue-600 text-white px-4 py-1 rounded">Send</button>
+    <button onclick="closeChat()" class="absolute top-2 right-2 text-gray-400 hover:text-white">✕</button>
+  </div>
+
+  <script>
+    // Get user from localStorage
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) {
+      window.location.href = 'index.html';
+    }
+
+    // Set user name
+    document.getElementById('userName').textContent = `Hi, ${user.username}`;
+
+    // Update balance and profit
+    function updateDashboard() {
+      // Load user data
+      let userData = JSON.parse(localStorage.getItem('userData') || '{}');
+      if (!userData[user.id]) {
+        userData[user.id] = { balance: 0, profit: 0, trades: 0 };
+      }
+
+      const data = userData[user.id];
+      document.getElementById('balance').textContent = `$${data.balance.toFixed(2)}`;
+      document.getElementById('profitToday').textContent = `$${(Math.random() * 100).toFixed(2)}`;
+      document.getElementById('activeTrades').textContent = Math.floor(Math.random() * 10);
+
+      // Load transactions
+      const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+      const list = document.getElementById('transactionList');
+      list.innerHTML = '';
+      transactions.forEach(tx => {
+        if (tx.user_id === user.id) {
+          const item = document.createElement('div');
+          item.className = 'border-b border-gray-700 py-2';
+          item.innerHTML = `
+            <p><strong>${tx.method}</strong> - $${tx.amount.toFixed(2)} (${tx.status})</p>
+            <p class="text-xs text-gray-400">${new Date(tx.created_at).toLocaleString()}</p>
+          `;
+          list.appendChild(item);
+        }
+      });
+    }
+
+    // Open deposit modal
+    function openDepositModal() {
+      document.getElementById('depositModal').classList.remove('hidden');
+    }
+
+    // Close deposit modal
+    function closeDepositModal() {
+      document.getElementById('depositModal').classList.add('hidden');
+    }
+
+    // Submit deposit
+    document.getElementById('depositForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const data = Object.fromEntries(formData.entries());
+      const amount = parseFloat(data.depositAmount);
+
+      // Simulate processing
+      const txId = Math.random().toString(36).substring(2, 10);
+      let status = ['pending', 'successful', 'failed'][Math.floor(Math.random() * 3)];
+      let success = status === 'successful';
+
+      // For crypto, show address
+      let address = '';
+      if (data.depositMethod === 'BTC') address = '35DrUNecGXnuhQvizUTxYD42WN9PqcHUHz';
+      else if (data.depositMethod === 'ETH') address = '0x86a2fda85b8978cd747c28ba7f5bdb5e855c7db0';
+      else if (data.depositMethod === 'USDT') address = 'TZ3jxLmbSEDKHLcEgw5uwM9kqUiSHj9njD';
+
+      // Save transaction
+      const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+      transactions.push({
+        id: txId,
+        user_id: user.id,
+        type: 'deposit',
+        method: data.depositMethod,
+        amount,
+        status,
+        created_at: new Date().toISOString()
+      });
+      localStorage.setItem('transactions', JSON.stringify(transactions));
+
+      // Update user balance if successful
+      if (success) {
+        let userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        if (!userData[user.id]) userData[user.id] = { balance: 0, profit: 0, trades: 0 };
+        userData[user.id].balance += amount;
+        localStorage.setItem('userData', JSON.stringify(userData));
+      }
+
+      // Show message
+      if (address) {
+        alert(`Send $${amount} to this address: ${address}\nTX ID: ${txId}`);
+      } else {
+        alert(`Deposit of $${amount} via ${data.depositMethod} is being reviewed.`);
+      }
+
+      closeDepositModal();
+      updateDashboard();
+    });
+
+    // Logout
+    function logout() {
+      localStorage.removeItem('user');
+      window.location.href = 'index.html';
+    }
+
+    // Chat functions
+    function openChat() {
+      document.getElementById('chatBox').classList.remove('hidden');
+    }
+
+    function closeChat() {
+      document.getElementById('chatBox').classList.add('hidden');
+    }
+
+    function sendMessage() {
+      const msg = document.getElementById('msgInput').value;
+      if (!msg.trim()) return;
+
+      // Store message
+      const messages = JSON.parse(localStorage.getItem('messages') || '[]');
+      messages.push({
+        user_id: user.id,
+        message: msg,
+        created_at: new Date().toISOString()
+      });
+      localStorage.setItem('messages', JSON.stringify(messages));
+
+      addMessage("You", msg);
+      document.getElementById('msgInput').value = '';
+    }
+
+    function addMessage(sender, text) {
+      const li = document.createElement('li');
+      li.innerHTML = `<strong>${sender}:</strong> ${text}`;
+      document.getElementById('messageList').appendChild(li);
+    }
+
+    // Initial load
+    updateDashboard();
+  </script>
+</body>
+</html>
