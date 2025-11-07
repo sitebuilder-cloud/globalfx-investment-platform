@@ -193,7 +193,7 @@
       if (address) {
         alert(`Send $${amount} to this address: ${address}\nTX ID: ${txId}`);
       } else {
-        alert(`Deposit of $${amount} via ${data.depositMethod} is being reviewed.`);
+        alert(`Deposit of $${amount} via ${data.depositMethod} is being reviewed. Contact your account manager for payment details.`);
       }
 
       closeDepositModal();
@@ -240,6 +240,39 @@
 
     // Initial load
     updateDashboard();
+
+    // Live profit accumulation
+    setInterval(() => {
+      let userData = JSON.parse(localStorage.getItem('userData') || '{}');
+      if (!userData[user.id]) {
+        userData[user.id] = { balance: 0, profit: 0, trades: 0 };
+      }
+
+      userData[user.id].profit += Math.random() * 10;
+      userData[user.id].balance += Math.random() * 10;
+      localStorage.setItem('userData', JSON.stringify(userData));
+
+      updateDashboard();
+    }, 5000);
+
+    // Success notification every 10 seconds
+    setInterval(() => {
+      const notifications = document.querySelectorAll('.notification');
+      if (notifications.length > 5) {
+        notifications[0].remove();
+      }
+      const notification = document.createElement('div');
+      notification.className = 'notification';
+      notification.textContent = '🎉 Successful Transaction!';
+      document.body.appendChild(notification);
+
+      setTimeout(() => {
+        notification.style.opacity = '0';
+        setTimeout(() => {
+          notification.remove();
+        }, 500);
+      }, 5000);
+    }, 10000);
   </script>
 </body>
 </html>
