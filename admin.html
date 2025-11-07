@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Panel - GlobalFX Invest</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-900 text-white font-sans">
+  <header class="bg-red-600 p-4 shadow-lg">
+    <div class="container mx-auto flex justify-between items-center">
+      <h1 class="text-2xl font-bold">Admin Panel</h1>
+      <nav class="hidden md:flex space-x-6">
+        <a href="#" class="hover:text-red-200">Users</a>
+        <a href="#" class="hover:text-red-200">Deposits</a>
+        <a href="#" class="hover:text-red-200">Messages</a>
+      </nav>
+      <button onclick="logout()" class="bg-red-700 px-4 py-2 rounded hover:bg-red-800">Logout</button>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-8">
+    <h2 class="text-2xl font-bold mb-6">Manage Users</h2>
+    <table class="w-full border-collapse">
+      <thead>
+        <tr class="bg-gray-800">
+          <th class="p-2">ID</th>
+          <th class="p-2">Username</th>
+          <th class="p-2">Email</th>
+          <th class="p-2">Balance</th>
+          <th class="p-2">Status</th>
+          <th class="p-2">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="usersTable"></tbody>
+    </table>
+
+    <div class="mt-8">
+      <h3 class="text-xl font-bold mb-4">Approve Deposits</h3>
+      <div id="depositsList"></div>
+      <button onclick="approveAllDeposits()" class="bg-green-600 text-white px-4 py-2 rounded mt-4">Approve All Pending</button>
+    </div>
+
+    <div class="mt-8">
+      <h3 class="text-xl font-bold mb-4">Support Messages</h3>
+      <ul id="messageList" class="space-y-2"></ul>
+    </div>
+  </main>
+
+  <script>
+    // Load users
+    function loadUsers() {
+      fetch('https://your-backend-name.onrender.com/api/users')
+        .then(res => res.json())
+        .then(users => {
+          const table = document.getElementById('usersTable');
+          table.innerHTML = '';
+          users.forEach(user => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td class="p-2">${user.id}</td>
+              <td class="p-2">${user.username}</td>
+              <td class="p-2">${user.email}</td>
+              <td class="p-2">$${parseFloat(user.balance || 0).toFixed(2)}</td>
+              <td class="p-2">${user.is_active ? 'Active' : 'Frozen'}</td>
+              <td class="p-2">
+                <button onclick="toggleFreeze('${user.email}')" class="px-2 py-1 bg-yellow-600 text-white rounded">${user.is_active ? 'Freeze' : 'Unfreeze'}</button>
+              </td>
+            `;
+            table.appendChild(row);
+          });
+        })
+        .catch(err => console.error(err));
+    }
+
+    // Toggle freeze
+    function toggleFreeze(email) {
+      fetch('https://your-backend-name.onrender.com/api/freeze-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: email })
+      }).then(res => res.json()).then(() => {
+        alert('Account status updated.');
+        loadUsers();
+      });
+    }
+
+    // Approve all deposits
+    function approveAllDeposits() {
+      fetch('https://your-backend-name.onrender.com/api/approve-all-deposits', {
+        method: 'POST'
+      }).then(res => res.json()).then(() => {
+        alert('All pending deposits approved.');
+        loadDeposits();
+      });
+    }
+
+    // Load deposits
+    function loadDeposits() {
+      fetch('https://your-backend-name.onrender.com/api/deposits')
+        .then(res => res.json())
+        .then(deposits => {
+          const list = document.getElementById('depositsList');
+          list.innerHTML = '';
+          deposits.forEach(deposit => {
+            const item = document.createElement('div');
+            item.className = 'bg-gray-800 p-2 rounded mb-2';
+            item.innerHTML = `
+              <p><strong>ID:</strong> ${deposit.id} | <strong>User:</strong> ${deposit.username} | <strong>Method:</strong> ${deposit.method} | <strong>Amount:</strong> $${deposit.amount} | <strong>Status:</strong> ${deposit.status}</p>
+              <button onclick="approveDeposit('${deposit.id}')" class="bg-green-600 text-white px-2 py-1 rounded mt-1">Approve</button>
+            `;
+            list.appendChild(item);
+          });
+        })
+        .catch(err => console.error(err));
+    }
+
+    // Approve single deposit
+    function approveDeposit(txId) {
+      fetch('https://your-backend-name.onrender.com/api/approve-deposit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ txId })
+      }).then(res => res.json()).then(() => {
+        alert('Deposit approved.');
+        loadDeposits();
+      });
+    }
+
+    // Load messages
+    function loadMessages() {
+      fetch('https://your-backend-name.onrender.com/api/messages')
+        .then(res => res.json())
+        .then(messages => {
+          const list = document.getElementById('messageList');
+          list.innerHTML = '';
+          messages.forEach(msg => {
+            const item = document.createElement('li');
+            item.innerHTML = `<strong>${msg.username}:</strong> ${msg.message} <small class="text-gray-400">${new Date(msg.created_at).toLocaleString()}</small>`;
+            list.appendChild(item);
+          });
+        })
+        .catch(err => console.error(err));
+    }
+
+    // Logout
+    function logout() {
+      localStorage.removeItem('user');
+      window.location.href = 'index.html';
+    }
+
+    // Initial load
+    loadUsers();
+    loadDeposits();
+    loadMessages();
+  </script>
+</body>
+</html>
