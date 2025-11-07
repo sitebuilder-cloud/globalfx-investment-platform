@@ -1,7 +1,7 @@
 const { Pool } = require('pg');
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://globalfx_db_user:7Wk1eQ2pZArFnaIunsJNDqE2CQiY78io@dpg-d46mamfgi27c73au94f0-a/globalfx_db',
+  connectionString: process.env.DATABASE_URL || 'postgresql://globalfx_db_user:7Wk1eQ2pZArFnaIunsJNDqE2CQiY78io@dpg-d46mamfgi27c73au94f0-a.oregon-postgres.render.com/globalfx_db',
 });
 
 // Create tables
