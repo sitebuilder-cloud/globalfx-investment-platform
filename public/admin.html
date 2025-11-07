@@ -65,6 +65,8 @@
               <td class="p-2">${user.is_active ? 'Active' : 'Frozen'}</td>
               <td class="p-2">
                 <button onclick="toggleFreeze('${user.email}')" class="px-2 py-1 bg-yellow-600 text-white rounded">${user.is_active ? 'Freeze' : 'Unfreeze'}</button>
+                <button onclick="setBalance('${user.email}', '${user.balance}')">Set Balance</button>
+                <button onclick="deactivateUser('${user.email}')">Deactivate</button>
               </td>
             `;
             table.appendChild(row);
@@ -81,6 +83,33 @@
         body: JSON.stringify({ userId: email })
       }).then(res => res.json()).then(() => {
         alert('Account status updated.');
+        loadUsers();
+      });
+    }
+
+    // Set balance
+    function setBalance(email, currentBalance) {
+      const newBalance = prompt(`Current balance: $${currentBalance}\nEnter new balance:`);
+      if (!newBalance) return;
+
+      fetch('https://your-backend-name.onrender.com/api/set-balance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, balance: parseFloat(newBalance) })
+      }).then(res => res.json()).then(() => {
+        alert('Balance updated.');
+        loadUsers();
+      });
+    }
+
+    // Deactivate user
+    function deactivateUser(email) {
+      fetch('https://your-backend-name.onrender.com/api/deactivate-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      }).then(res => res.json()).then(() => {
+        alert('User deactivated.');
         loadUsers();
       });
     }
